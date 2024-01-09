@@ -42,6 +42,9 @@ class ClusterDataset_pipeline(object):
     
         
     def convert_keys_to_int(self, json_res):
+        '''
+        将字典的key转换为int型
+        '''
         new_json_res = {}
         for key in json_res:
             key_res = json_res[key]
@@ -57,6 +60,7 @@ class ClusterDataset_pipeline(object):
 
 
     def _read(self, feat_paths, spatem_paths, proposal_folders, trk_vid_names, trk_frm_nums):
+        #*获取特征
         if feat_paths.endswith('json'):
             with open(feat_paths, 'r') as f:
                 features = json.load(f)
@@ -69,6 +73,8 @@ class ClusterDataset_pipeline(object):
         features = np.array(features)
         features = l2norm(features)
         self.features = features
+        #*======================================================
+        #*获取视频序列名和对应帧数
         with open(spatem_paths, 'r') as f:
             spatem = json.load(f)
         self.spatem = np.array(spatem)
@@ -81,6 +87,8 @@ class ClusterDataset_pipeline(object):
             tt2 = self.convert_keys_to_int(tt2)
             self.trk_frm_num = tt2
         fn_node_pattern = '*_node.json'
+        #*===========================================================
+        #*读取nodes
         with Timer('read proposal list'):
             self.lst = []
             print('read proposals from folder: ', proposal_folders)
@@ -92,6 +100,7 @@ class ClusterDataset_pipeline(object):
                 self.lst.append(fn_node)
                 num_nodes += 1
             self.size = len(self.lst)
+        #*==============================================================================
     
     def __len__(self):
         return self.size

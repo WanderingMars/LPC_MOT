@@ -23,7 +23,7 @@ def main():
     parser.add_argument('--output_path', type=str, help='video path', default ='')
     parser.add_argument('--prefix', type=str, help='prefix of input pb files', default='')
     args = parser.parse_args()
-    proposal_files = glob.glob(args.proposal_file + '/' + args.prefix + '*proposals.json')
+    proposal_files = glob.glob(args.proposal_file + '/' + args.prefix + '*proposals.json') #?proposal文件作用
     vide_name_all = [os.path.basename(proposal_file).split('_proposals.json')[0] for proposal_file in proposal_files]
     vide_name_all = sorted(vide_name_all)
     if not os.path.exists(args.output_path):
@@ -35,11 +35,13 @@ def main():
 
 def generate_one_part(context):
     try:
+        #*从.pb文件列表获取所有视频序列的轨迹信息
         vide_name_all, args = context
         body_pb_files = glob.glob(args.fe_body_track_folder + '/' + args.prefix + '*pb')
         tracklet_id_transfer, tracklet_features, tracklet_temporal_spatial, tracklet_frame_num, tracklet_video_name = {}, [], [], {}, {}
         for i, video_name in enumerate(tqdm(vide_name_all)):
             tracklet_id_transfer, tracklet_features, tracklet_temporal_spatial, tracklet_frame_num, tracklet_video_name = SV_one_video((video_name, body_pb_files, args), tracklet_id_transfer, tracklet_features, tracklet_temporal_spatial, tracklet_frame_num, tracklet_video_name)
+        #*===================================================================================
         output_json_file = os.path.join(args.output_path, 'tracklet_id_transfer.json')
         with open(output_json_file, 'w') as f1:
             json.dump(tracklet_id_transfer, f1)
@@ -62,12 +64,15 @@ def generate_one_part(context):
         num_proposals = 0
         GT_IoP_all = {}
         for video_name in vide_name_all:
+            #*获取视频序列的proposal
             proposal_files = glob.glob(args.proposal_file + video_name + '*proposals.json')
             assert len(proposal_files) == 1
             proposal_file = proposal_files[0]
             with open(proposal_file, 'r') as f:
                 proposal_video = json.load(f)
             used_dp = []
+            #*===========================================
+            #*从proposal中筛选nodes
             for proposal in proposal_video.values():
                 tracklet_total = proposal["proposals"]
                 #iop = proposal["IoP"]
@@ -88,6 +93,7 @@ def generate_one_part(context):
                         used_dp.append(nodes)
                     else:
                         used_dp.append(nodes)
+            #*===================================================
         iop_path = args.output_path + '/GT_IoP.json'
         with open(iop_path, 'w') as f:
             json.dump(GT_IoP_all,f)
@@ -119,11 +125,13 @@ def SV_one_video(context, tracklet_id_transfer, tracklet_features, tracklet_temp
     try:
         vid_validation, body_pb_files, args = context
         pb_files_all = []
+        #*将特定的.pb文件添加进列表
         for pb_file in body_pb_files:
             vid_name = os.path.basename(pb_file).split('.')[0]
             if vid_name == vid_validation:
                 pb_files_all.append(pb_file)
         assert len(pb_files_all) == 1
+        #*==================================
         _, tracklet_all, _, _ = load_sv_pb_result_from_sv_pb_file(pb_files_all[0])
         tracklet_order = []
         for key, value in tracklet_all.items():

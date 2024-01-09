@@ -6,7 +6,8 @@ import numpy as np
 
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
-sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network/dsgcn/datasets/')
+# sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network/dsgcn/datasets/')
+sys.path.append('/workspace/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network/dsgcn/datasets')
 from sampler import DistributedSampler, DistributedSequentialSampler
 
 

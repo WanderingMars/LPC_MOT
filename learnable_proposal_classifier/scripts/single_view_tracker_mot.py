@@ -37,6 +37,7 @@ def parse_arguments():
 
 def load_detections_to_nodes(detection_file, camera_name, confidence_threshold,
                     start_frame=-1, end_frame=100000000, do_augmentation=False, skip_frames = 1, models=None):
+    #*读detection的.pb文件，获取检测结果
     mlog.info("Loading detection file {}".format(detection_file))
     det_nodes = []
 
@@ -58,6 +59,7 @@ def load_detections_to_nodes(detection_file, camera_name, confidence_threshold,
         detections_from_file = {int(k):v for k, v in detections_from_file.items()}
     else:
         raise Exception('unknown detection format {0}'.format(ext))
+    #*======================================================================================
     if do_augmentation:
         detections_all = [[k, v] for k, vs in detections_from_file.items() for v in vs]
         remove_ratio = random.uniform(5, 20)/ 100.0
@@ -69,7 +71,7 @@ def load_detections_to_nodes(detection_file, camera_name, confidence_threshold,
         for det in detections_left:
             frame, box = det[0], det[1]
             detections_from_file.setdefault(frame, []).append(box)
-
+    #*构造图的节点，第一重循环遍历帧，第二重循环遍历一帧里面的人
     for frame_index in sorted(detections_from_file.keys()):
         if start_frame <= frame_index < end_frame and frame_index % skip_frames == 0:
             humans = detections_from_file[frame_index]
@@ -89,6 +91,7 @@ def load_detections_to_nodes(detection_file, camera_name, confidence_threshold,
                 }, models=None)
                 det_nodes.append(node)
     mlog.info("loaded {} number of detections".format(len(det_nodes)))
+    #*====================================================================================
     return det_nodes
 
 def save_nodes_to_json(nodes, camera_view, output_file, skipped_frames=1):
@@ -147,6 +150,7 @@ def save_nodes_online_pbs(nodes, camera_view, tracking_file, result_id_type='tra
 
 def generate_sv_single_video(context):
     try:
+        #*读pb文件和配置文件
         detection_file, args = context
         output_pb_file = os.path.join(args.output_path, os.path.basename(detection_file).split('.')[0] + '.mp4.cut.pb')
         output_json_file = os.path.join(args.output_path, os.path.basename(detection_file).split('.')[0] + '.mp4.cut.mp4.final.reduced.json')
@@ -163,6 +167,8 @@ def generate_sv_single_video(context):
         with open(config_file, 'r') as f:
             configs = json.loads(f.read())
         ############################################################
+        #*=============================================================
+        #*构造图节点Nodes
         # load data
         nodes = load_detections_to_nodes(detection_file,
                 cname,
@@ -171,6 +177,7 @@ def generate_sv_single_video(context):
                 args.start_frame + args.num_frames_process - 1, args.do_augmentation)
 
         opts = {} 
+        #*==================================================================
         graph = Graph(nodes,
                 create_affinities(configs["affinity"], opts),
                 cname)
@@ -190,6 +197,7 @@ if __name__ == "__main__":
     if not os.path.exists(args.output_path):
         os.makedirs(args.output_path)
     #detection_files = glob.glob(os.path.join(args.detection_file_path, args.prefix + "*.json"))
+    #*读取所有的检测pb文件
     detection_files = glob.glob(os.path.join(args.detection_file_path, args.prefix + "*.pb"))
     if args.num_proc == 1:
         for detection_file in detection_files:
@@ -200,5 +208,6 @@ if __name__ == "__main__":
         p.close()
         p.join()
     print('all finished')
+    #*============================================================================================================
 
 

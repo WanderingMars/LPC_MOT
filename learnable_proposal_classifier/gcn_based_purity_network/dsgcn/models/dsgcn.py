@@ -119,9 +119,10 @@ class GNN(nn.Module):
             raise KeyError('Unkown reduce method', self.reduce_method)
 
     def forward(self, data, return_loss=False):
+        #*模型前向传播
         purity_label = data[-1].cpu()
         reid_feature = data[0].cpu()
-        spatem_feature = data[1].cpu()
+        spatem_feature = data[1].cpu() #?空间特征是如何获取的
         feature_input = torch.cat([reid_feature, spatem_feature], 2)
         #feature_input = spatem_feature
         #feature_input = reid_feature
@@ -134,6 +135,7 @@ class GNN(nn.Module):
             return y, loss
         else:
             return y
+        #*=======================================================================
 
 
 class GCN(GNN):
@@ -168,13 +170,17 @@ class GCN(GNN):
         D = adj.sum(dim=2, keepdim=True)
         D.detach_()
         assert (D > 0).all(), "D should larger than 0, otherwise gradient will be NaN."
+        #*将数据经过每一层
         for layer in self.layers:
             x = layer(x, adj, index, D)
+        #*===================================
+        #*模型最后几层，获取特征
         x = self.pool(x)
         if self.dropout is not None:
             x = self.dropout(x)
         x = x.view(-1, self.inplanes)
         feature = x
+        #*=========================================
         x = self.classifier(x)
         if self.reduce_method == 'no_pool':
             if self.num_classes > 1:

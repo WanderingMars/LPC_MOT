@@ -6,7 +6,8 @@ import torch
 import torch.nn as nn
 import argparse
 import matplotlib
-sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network/')
+# sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network/')
+sys.path.append('/workspace/LPC_MOT/learnable_proposal_classifier/gcn_based_purity_network')
 from dsgcn.models.dsgcn import dsgcn
 import json
 import numpy as np
@@ -36,6 +37,7 @@ def set_random_seed(seed):
 
 
 def main():
+    #*导入数据文件
     cfg = parse_args()
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     cfg.test_data = {}
@@ -55,6 +57,8 @@ def main():
         # set random seeds
         if cfg.seed is not None:
             set_random_seed(cfg.seed)
+    #*======================================================================================
+    #*放模型，加载数据，模型预测
         model = torch.load(cfg.load_from1)
         dataset = build_dataset_pipeline(cfg.test_data)
         processor = build_processor(cfg.stage)
@@ -79,6 +83,8 @@ def main():
                     output_probs.append(output.tolist())
         else:
             raise NotImplementedError
+        #*==============================================================
+        #*将概率与节点node对应上
         output_probs1 = [iop for item in output_probs for iop in item]
         output_probs1 = output_probs1[:len(fn_nodes)]
         assert len(output_probs1) == len(fn_nodes)
@@ -89,7 +95,7 @@ def main():
             estimated_iop_dict[node_name] = estimated_iop
         with open(cfg.output_dir + '/Estimated_IoP_eval.json', 'w') as f:
             json.dump(estimated_iop_dict, f)
-
+        #*=================================================================
 
 if __name__ == '__main__':
     main()

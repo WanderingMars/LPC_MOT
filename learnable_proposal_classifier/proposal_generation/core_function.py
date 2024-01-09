@@ -18,7 +18,8 @@ from scipy.optimize import linear_sum_assignment
 from collections import Counter
 from cluster_nodes import *
 from scipy.interpolate import interp1d
-sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/proto/')
+# sys.path.append('/root/LPC_MOT/learnable_proposal_classifier/proto/')
+sys.path.append('/workspace/LPC_MOT/learnable_proposal_classifier/proto/')
 import online_tracking_results_pb2
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)-8s %(message)s',)
@@ -213,11 +214,14 @@ def load_sv_pb_result_from_sv_pb_file(pb_file, threshold_filter=0):
     track_total = {}
     num_frames_before_merge = 0
     num_frames_after_merge = 0
+    #*读取.pb文件中的轨迹信息
     tracking_res = online_tracking_results_pb2.Tracks()
     with open(pb_file, 'rb') as f:
         tracking_res.ParseFromString(f.read())
+    #*========================================================
     track_frame_res = {}
     for track in tracking_res.tracks:
+        #*获取一条轨迹信息
         num_frames_before_merge += len(track.tracked_detections)
         if len(track.tracked_detections) > threshold_filter:
             num_frames_after_merge += len(track.tracked_detections)
@@ -225,6 +229,8 @@ def load_sv_pb_result_from_sv_pb_file(pb_file, threshold_filter=0):
             app_feature = list(track.features.features[0].feats)
             tracked_detections = track.tracked_detections
             frame_index, bounding_box = [], []
+        #*==============================================
+        #*获取一条轨迹的所有检测信息
             for det in tracked_detections:
                 frame_idx = det.frame_index
                 box_x = det.box_x
@@ -235,6 +241,8 @@ def load_sv_pb_result_from_sv_pb_file(pb_file, threshold_filter=0):
                 frame_index.append(frame_idx)
                 bounding_box.append(bbx)
                 track_frame_res.setdefault(frame_idx, []).append([bbx, tid])
+        #*===============================================
+        #*整合轨迹信息
             sort_index = np.array(frame_index).argsort()
             frame_index = np.array(frame_index)[sort_index]
             frame_index = frame_index.tolist()
@@ -245,6 +253,7 @@ def load_sv_pb_result_from_sv_pb_file(pb_file, threshold_filter=0):
             else:
                 tt1 = track_total[tid]
                 track_total[tid] = [app_feature, tt1[2]+frame_index, tt1[3]+bounding_box]
+        #*=================================================================================
     return track_frame_res, track_total, num_frames_after_merge, num_frames_before_merge
 
 
@@ -560,6 +569,7 @@ def update_cluster(cluster_input, clusters, max_overlap=0):
 
 def deoverlap_IoU_IoP_combine_threshold(proposals, IoU, IoP, weight, threhold=0.50, tracklet_all = {}):
     proposals_new, IoU_new, IoP_new, IoU_IoP_new = [], [], [], []
+    #*构建IOU和IOP联合列表
     for i in range(len(proposals)):
         proposals_new.append(proposals[i])
         iop = IoP[i]
@@ -571,6 +581,8 @@ def deoverlap_IoU_IoP_combine_threshold(proposals, IoU, IoP, weight, threhold=0.
         IoU_new.append(iou)
         IoP_new.append(iop)
         IoU_IoP_new.append(weight*iop+iou)
+    #*=================================================
+    #*以IoU_IoP为标准排序
     sorted_ind = sorted(range(len(IoU_IoP_new)), key=lambda k: IoU_IoP_new[k], reverse=True)
     proposals_new = [proposals_new[i] for i in sorted_ind]
     IoU_new = [IoU_new[i] for i in sorted_ind]
@@ -580,6 +592,8 @@ def deoverlap_IoU_IoP_combine_threshold(proposals, IoU, IoP, weight, threhold=0.
     num_ii = [i for i in IoP_new if i>0]
     num_pro = len(num_ii)
     tracklet_IoP_perfect = set()
+    #*========================================================
+    #*准备输出
     for i, cluster in enumerate(proposals_new):
         for v in cluster:
             if v not in tracklet_label_output:
@@ -596,6 +610,7 @@ def deoverlap_IoU_IoP_combine_threshold(proposals, IoU, IoP, weight, threhold=0.
         proposal_final[val].add(key)
     proposal_out = [list(val) for val in proposal_final.values()]
     return tracklet_label_output1, proposal_out, tracklet_IoP_perfect
+    #*==================================================================
 
 
 def merge_sv_tracks(tracks, vid_id = None, feat_merge_type = 'avg'):

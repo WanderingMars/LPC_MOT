@@ -32,6 +32,7 @@ def main():
     parser.add_argument('--deoverlapping_threshold', type=float, help='the threshold for deoverlapping', default =0.50)
     parser.add_argument('--weight_param', type=float, help='the weighting parameter for purity score', default =1)
     args = parser.parse_args()
+    #*打开数据文件
     body_pb_files = glob.glob(args.input_path + '/' + args.prefix + '*.pb')
     if len(body_pb_files) > 0:
         fn_node_pattern = '*.json'
@@ -43,6 +44,8 @@ def main():
             tracklet_id_transfer = json.load(f)
         tracklet_id_ts = {v:k for k, v in tracklet_id_transfer.items()}
         assert len(fn_nodes_eval) == len(estimated_IoP_dict)
+    #*=======================================================================================
+    #*将数据文件内容写入变量
         for fn_node in fn_nodes_eval:
             with open(fn_node, 'r') as f:
                 proposal_i = json.load(f)
@@ -56,9 +59,11 @@ def main():
             proposals_output[video_name].setdefault("IoP", [])
             proposals_output[video_name]["proposals"].append(prop_name)
             proposals_output[video_name]["IoP"].append(estimated_IoP_dict[fn_node.split('/')[-1]])
+    #*=================================================================================================
         
         if not os.path.exists(args.output_path):
             os.makedirs(args.output_path)
+        #*多线程
         if args.num_proc > 1:
             p = Pool(args.num_proc)
             p.map(deoverlap_one_video, [ (video, prop_i, body_pb_files, args) for video, prop_i in proposals_output.items()])
@@ -67,11 +72,12 @@ def main():
         else:
             for video, prop_i in proposals_output.items():
                 deoverlap_one_video((video, prop_i, body_pb_files, args))
-               
+        #*======================================================================
 
     print('finished')
 
 def deoverlap_one_video(context):
+    #*从pb文件中加载数据
     try:
         video, prop_i, body_pb_files, args = context
         print('proceesing ' + video)
@@ -91,11 +97,13 @@ def deoverlap_one_video(context):
                 frame_all += tracklet_all[tid][1]
             prop_i['IoU'].append(float(max(frame_all) - min(frame_all)) / 200.0)
         cameraId = video.split('_')[0]
+    #*======================================================================================
         tracklet_label_output_ini, proposal_out, tracklet_IoP_perfect = deoverlap_IoU_IoP_combine_threshold(prop_i['proposals'],
                                                                                                   prop_i['IoU'],
                                                                                                   prop_i['IoP'], args.weight_param,
                                                                                                   args.deoverlapping_threshold,
                                                                                                   tracklet_all)
+        #*保存
         merge_id_map = {}
         for proposals in proposal_out:
             track_id_assign = 'single_view_track_' + str(proposals[0])
@@ -112,7 +120,7 @@ def deoverlap_one_video(context):
     except Exception as e:
         print(e)
         sys.exit()
-
+    #*================================================================================================
 
 if __name__ == "__main__":
     main()
